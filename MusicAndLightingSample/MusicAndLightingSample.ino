@@ -75,6 +75,12 @@ void redWhiteBlue() {
   uint16_t sinBeat2  = beatsin16(30, 0, NUM_LEDS - 1, 0, 21845);
   uint16_t sinBeat3  = beatsin16(30, 0, NUM_LEDS - 1, 0, 43690);
 
+  Serial.print(sinBeat);
+  Serial.print(",");
+  Serial.print(sinBeat2);
+  Serial.print(",");
+  Serial.println(sinBeat3);
+
   leds[sinBeat]   = CRGB::Blue;
   leds[sinBeat2]  = CRGB::Red;
   leds[sinBeat3]  = CRGB::White;
