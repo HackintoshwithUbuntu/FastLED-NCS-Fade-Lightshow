@@ -1,8 +1,8 @@
-//#define FASTLED_INTERNAL //remove annoying pragma messages
-#define FASTLED_RMT5_RECYCLE 1
+//#define FASTLED_INTERNAL      // remove annoying pragma messages
+#define FASTLED_RMT5_RECYCLE 1  // https://github.com/FastLED/FastLED/issues/1768
 #include <FastLED.h>
 
-#define NUM_LEDS            16      // Works best if this number is divisible by 32
+#define NUM_LEDS            96      // Works best if this number is divisible by 32 (min 32 leds)
 #define LED_PIN             2       // Set this to the pin the data wire for leds is connected to
 #define DEFAULT_BRIGHTNESS  50      // 50 is a good balance between brightness and power usage, set between 0 (no brightness) and 100 (max brightness)
 #define LED_TYPE            WS2812B // Set this to the type of FastLED supported strip you are using
@@ -13,6 +13,7 @@ uint8_t currentLed = 0;
 uint8_t curStage = 0;
 uint8_t curSubStage = 0;
 
+// TODO just change this to a float divide and ceil
 const uint8_t stage0Size = (NUM_LEDS < 32) ? 1 : ceil((float)NUM_LEDS / 32);
 uint8_t stage1Offset = 0;
 
@@ -89,28 +90,15 @@ void stage0Animation() {
     }
   }
 }
-
+int test = 0;
 void stage1Animation(int8_t movement) {
   EVERY_N_MILLISECONDS(100) {
-    // Essentially we want to increment the first occurance of each colour
-    uint8_t localOffset = stage1Offset % stage0Size;
-    // Handle case for updating the starting LED in forward movement
-    if (localOffset == 0 && movement == 1) {
-      leds[localOffset] = leds[NUM_LEDS - 1];
-      localOffset += stage0Size;
+    // I tried to be more efficient but failed due to the multiple possible configs
+    // in theory you can just update the first led in each colour splash
+    for (int i = 0; i < NUM_LEDS; i++) {
+      leds[i] = ColorFromPalette(stage0Palette, (((NUM_LEDS + stage1Offset + i) % NUM_LEDS) / stage0Size) % 4 * 16);
     }
-    // Handle case for updating final LED in backwards movement
-    // do so without if unnecessary if statements in the for loop
-    // yes, this is over optimisation
-    uint8_t length = (movement == -1) ? (NUM_LEDS - 1) : NUM_LEDS;
-
-    for (int i = localOffset; i < length; i += stage0Size) {
-      leds[i] = leds[i - movement];
-    }
-    if (movement == -1) {
-      leds[length] = leds[0];
-    }
-
+    test++;
     stage1Offset+=movement;
   }
 }
