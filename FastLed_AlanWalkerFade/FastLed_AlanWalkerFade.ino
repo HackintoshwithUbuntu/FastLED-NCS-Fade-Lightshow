@@ -1,6 +1,8 @@
+//#define FASTLED_INTERNAL //remove annoying pragma messages
+#define FASTLED_RMT5_RECYCLE 1
 #include <FastLED.h>
 
-#define NUM_LEDS            64      // Works best if this number is divisible by 32
+#define NUM_LEDS            16      // Works best if this number is divisible by 32
 #define LED_PIN             2       // Set this to the pin the data wire for leds is connected to
 #define DEFAULT_BRIGHTNESS  50      // 50 is a good balance between brightness and power usage, set between 0 (no brightness) and 100 (max brightness)
 #define LED_TYPE            WS2812B // Set this to the type of FastLED supported strip you are using
@@ -73,7 +75,7 @@ void stage0Animation() {
     for (int i = currentLed; i < currentLed + stage0Size; i++) {
       leds[i] = ColorFromPalette(stage0Palette, curSubStage * 16); // use multiply 16 with only stage 1 colours for nice gradients
     }
-    Serial.println(100);
+
     //leds[currentLed] = ColorFromPalette(stage0Palette, curSubStage * 16);
     currentLed += 4 * stage0Size;
 
@@ -92,13 +94,23 @@ void stage1Animation(int8_t movement) {
   EVERY_N_MILLISECONDS(100) {
     // Essentially we want to increment the first occurance of each colour
     uint8_t localOffset = stage1Offset % stage0Size;
-
-    Serial.print(50);
-    Serial.print(',');
-    for (int i = localOffset; i < NUM_LEDS; i += stage0Size) {
-      Serial.println((stage1Offset + i) % 4);
-      leds[i] = ColorFromPalette(stage0Palette, ((stage1Offset + i) % 4) * 16);
+    // Handle case for updating the starting LED in forward movement
+    if (localOffset == 0 && movement == 1) {
+      leds[localOffset] = leds[NUM_LEDS - 1];
+      localOffset += stage0Size;
     }
+    // Handle case for updating final LED in backwards movement
+    // do so without if unnecessary if statements in the for loop
+    // yes, this is over optimisation
+    uint8_t length = (movement == -1) ? (NUM_LEDS - 1) : NUM_LEDS;
+
+    for (int i = localOffset; i < length; i += stage0Size) {
+      leds[i] = leds[i - movement];
+    }
+    if (movement == -1) {
+      leds[length] = leds[0];
+    }
+
     stage1Offset+=movement;
   }
 }
