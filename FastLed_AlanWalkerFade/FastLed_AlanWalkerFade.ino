@@ -1,5 +1,6 @@
-//#define FASTLED_INTERNAL      // remove annoying pragma messages
+// #define FASTLED_INTERNAL     // remove annoying pragma messages
 #define FASTLED_RMT5_RECYCLE 1  // https://github.com/FastLED/FastLED/issues/1768
+#include <Arduino.h>
 #include <FastLED.h>
 
 #define NUM_LEDS            96      // Works best if this number is divisible by 32 (min 32 leds)
@@ -17,6 +18,9 @@ uint8_t curSubStage = 0;
 const uint8_t stage0Size = (NUM_LEDS < 32) ? 1 : ceil((float)NUM_LEDS / 32);
 uint8_t stage1Offset = 0;
 
+bool isFlashing = false;
+uint16_t nextFlash = 0;
+
 unsigned long startTime;
 
 CRGBPalette16 stage0Palette(
@@ -25,7 +29,7 @@ CRGBPalette16 stage0Palette(
   CRGB::Red,
   CRGB::DarkGreen,
   CRGB(26, 171, 176),    // Light Blue
-  0x100000,
+  CRGB::Blue,
   0x100000,
   0x100000,
   0x100000,
@@ -61,8 +65,13 @@ void loop() {
     stage1Animation(1);
   } else if (curTime < 32.3 * 1000) {
     stage1Animation(-1);
+  } else if (curTime < 36.7 * 1000) {
+    stage1Animation(1);
   } else if (curTime < 42.8 * 1000) {
     stage1Animation(1);
+    flashAnimation(curTime, 11);
+  } else if (curTime < 50 * 1000) {
+    stage3Animation();
   }
   // 23.3/23.5 (or could use 24.4-24.2), around 26.8, 29.678 (could switch colours), 32.3 + flash, 42.8 is the big change
   // 21.3/21.4
@@ -92,6 +101,8 @@ void stage0Animation() {
 }
 int test = 0;
 void stage1Animation(int8_t movement) {
+  if (isFlashing) return;
+
   EVERY_N_MILLISECONDS(100) {
     // I tried to be more efficient but failed due to the multiple possible configs
     // in theory you can just update the first led in each colour splash
@@ -101,6 +112,25 @@ void stage1Animation(int8_t movement) {
     test++;
     stage1Offset+=movement;
   }
+}
+
+uint32_t getFlashInterval() {
+  if (isFlashing) {
+    return 20;
+  }
+  return nextFlash;
+}
+
+void flashAnimation(unsigned long &curTime, uint8_t ratio) {
+  EVERY_N_MILLISECONDS_DYNAMIC(getFlashInterval()) {
+      if (isFlashing) {
+        isFlashing = false;
+        nextFlash = (42.8 * 1000 - curTime) / ratio;
+      } else {
+        fill_solid(leds, NUM_LEDS, CRGB::Blue); 
+        isFlashing = true;
+      }
+    }
 }
 
 
