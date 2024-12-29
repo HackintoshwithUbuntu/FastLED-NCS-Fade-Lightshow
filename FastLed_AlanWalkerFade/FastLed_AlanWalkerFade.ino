@@ -1,22 +1,27 @@
+// FastLED definitions
 // #define FASTLED_INTERNAL     // remove annoying pragma messages
 #define FASTLED_RMT5_RECYCLE 1  // https://github.com/FastLED/FastLED/issues/1768
+// Includes
 #include <Arduino.h>
 #include <FastLED.h>
 
-#define NUM_LEDS            96      // Works best if this number is divisible by 32 (min 32 leds)
+// Parameters you will likely need to adjust to run the animation
+#define NUM_LEDS            96      // Works best if this number is divisible by 32
 #define LED_PIN             2       // Set this to the pin the data wire for leds is connected to
 #define DEFAULT_BRIGHTNESS  50      // 50 is a good balance between brightness and power usage, set between 0 (no brightness) and 100 (max brightness)
 #define LED_TYPE            WS2812B // Set this to the type of FastLED supported strip you are using
 
-#define STAGE_3_SPLASHSIZE 5
+// Some animation control parameters
+#define STAGE_3_SPLASHSIZE     5    // Size of "splash" when changing colours on first beat drop
+#define STAGE_3_PIXEL_DISTANCE 0.6  // Fraction of the LED strip that the flying pixel covers
 CRGB leds[NUM_LEDS];
 
-uint8_t currentLed = 0;
 uint8_t curStage = 0;
 uint8_t curSubStage = 0;
 
 // TODO just change this to a float divide and ceil
 const uint8_t stage0Size = (NUM_LEDS < 32) ? 1 : ceil((float)NUM_LEDS / 32);
+uint8_t stage0CurrentLed = 0;
 uint8_t stage1Offset = 0;
 
 CRGB stage3Colour1 = CRGB::Yellow;
@@ -27,6 +32,7 @@ uint16_t nextFlash = 0;
 
 unsigned long startTime;
 
+// TODO probably just make this into an array
 CRGBPalette16 stage0Palette(
   // Stage 0 and 1 Colours
   0xecbfff,   // Very Light Purple
@@ -86,7 +92,8 @@ void loop() {
     stage3Animation(stage3Colour1, stage3Colour2, false);
     stage3AnimationP2(stage3Colour1, stage3Colour2);
   } else if (curTime < 110 * 1000) {
-    stage3Animation(CRGB::Magenta, CRGB::LightSeaGreen, false);
+    stage3AnimationP3(CRGB::Magenta, CRGB::LightSeaGreen);
+    // ends either 74.8 or .75
   }
   
   // 58.7/8 first beat, 60.1 second, 61.4 third (very accurate last 2), 62.8 (though .7 may be ok as well)
@@ -98,24 +105,24 @@ void loop() {
 
 void stage0Animation() {
   EVERY_N_MILLISECONDS(700) {
-    for (int i = currentLed; i < currentLed + stage0Size; i++) {
+    for (int i = stage0CurrentLed; i < stage0CurrentLed + stage0Size; i++) {
       leds[i] = ColorFromPalette(stage0Palette, curSubStage * 16, NOBLEND); // use multiply 16 with only stage 1 colours for nice gradients
     }
 
-    //leds[currentLed] = ColorFromPalette(stage0Palette, curSubStage * 16);
-    currentLed += 4 * stage0Size;
+    //leds[stage0CurrentLed] = ColorFromPalette(stage0Palette, curSubStage * 16);
+    stage0CurrentLed += 4 * stage0Size;
 
-    if (currentLed >= NUM_LEDS) {
+    if (stage0CurrentLed >= NUM_LEDS) {
       curSubStage++;
       // Setting the start led to the substage will let us start with an offset
-      currentLed = curSubStage * stage0Size;
+      stage0CurrentLed = curSubStage * stage0Size;
       if (curSubStage >= 4) {
         curSubStage = 0;
       }
     }
   }
 }
-int test = 0;
+
 void stage1Animation(int8_t movement) {
   if (isFlashing) return;
 
@@ -126,7 +133,6 @@ void stage1Animation(int8_t movement) {
       // TODO possibly use a scale fast math function here and elsewhere
       leds[i] = ColorFromPalette(stage0Palette, (((NUM_LEDS + stage1Offset + i) % NUM_LEDS) / stage0Size) % 4 * 16);
     }
-    test++;
     stage1Offset+=movement;
   }
 }
@@ -151,8 +157,8 @@ void flashAnimation(unsigned long &curTime, uint8_t ratio) {
 }
 
 // Adapted from https://github.com/s-marley/FastLED-basics/blob/main/5.%20Multiple%20patterns/functionsTimer/functionsTimer.ino
-const uint16_t sinMiddle1 = (NUM_LEDS) * 0.6 - 1;
-const uint16_t sinMiddle2 = (NUM_LEDS) * 0.4 - 1;
+const uint16_t sinMiddle1 = (NUM_LEDS) * STAGE_3_PIXEL_DISTANCE - 1;
+const uint16_t sinMiddle2 = (NUM_LEDS) * (1 - STAGE_3_PIXEL_DISTANCE) - 1;
 void stage3Animation(CRGB colour1, CRGB colour2, bool splash) {
   uint16_t sinBeat   = beatsin16(15, 0, sinMiddle1, 0, 0);
   uint16_t sinBeat2  = beatsin16(15, sinMiddle2, NUM_LEDS - 1, 0, 32767); // Phase of half 65535 (max uint16_t)
@@ -173,10 +179,22 @@ void stage3Animation(CRGB colour1, CRGB colour2, bool splash) {
 const uint16_t stage3Intervals[] = {10, 1.3 * 1000, 1.3 * 1000, 1.3 * 1000, 0.35 * 1000, 0.35 * 1000, 999 * 1000};
 void stage3AnimationP2(CRGB &colour1, CRGB &colour2) {
   EVERY_N_MILLISECONDS_DYNAMIC(stage3Intervals[curSubStage]) {
-    Serial.println(curSubStage);
-    
     colour1 = CHSV(random8(), random8(), random8());
     colour2 = CHSV(random8(), random8(), random8());
     curSubStage++;
+  }
+}
+
+void stage3AnimationP3(CRGB colour1, CRGB colour2) {
+  // scaling is one thing and we can do it with the time remaining
+  // The other factor is using the ease function to calculate position using current progress (0-255) and then scaling that to a position in NUM_LEDS
+  // When progress is done we need to start going negative progress down back to 0
+  static uint8_t counter = 0;
+  EVERY_N_MILLISECONDS(20) {
+    counter++;
+    uint8_t location = scale8(quadwave8(counter), (NUM_LEDS * STAGE_3_PIXEL_DISTANCE));
+    leds[(int)(NUM_LEDS * (1 - STAGE_3_PIXEL_DISTANCE)) + location] = colour1;
+    leds[(int)(NUM_LEDS * STAGE_3_PIXEL_DISTANCE) - location] = colour2;
+    fadeToBlackBy(leds, NUM_LEDS, 10);
   }
 }
