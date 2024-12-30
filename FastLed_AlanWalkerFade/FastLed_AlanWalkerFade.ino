@@ -193,9 +193,14 @@ void stage3AnimationP3(unsigned long &curTime, CRGB colour1, CRGB colour2) {
   EVERY_N_MILLISECONDS(15) {
     counter++;
     float ratio =  1 - ((curTime - (64.1 * 1000)) / ((74.75 - 64.1) * 1000)) + 0.15;
-    Serial.println(((curTime - (64.1 * 1000)) / ((74.75 - 64.1) * 1000)));
-    Serial.println(ratio);
+    Serial.print(((curTime - (64.1 * 1000)) / ((74.75 - 64.1) * 1000)));
+    Serial.print(',');
+    Serial.print(ratio);
+    Serial.print(',');
     uint8_t location = scale8(quadwave8(counter), (NUM_LEDS * STAGE_3_PIXEL_DISTANCE * ratio));
+    Serial.print((NUM_LEDS * STAGE_3_PIXEL_DISTANCE * ratio));
+    Serial.print(',');
+    Serial.println(location);
     leds[(int)(NUM_LEDS * (1 - STAGE_3_PIXEL_DISTANCE)) + location] = colour1;
     leds[(int)(NUM_LEDS * STAGE_3_PIXEL_DISTANCE) - location] = colour2;
     fadeToBlackBy(leds, NUM_LEDS, 50);
