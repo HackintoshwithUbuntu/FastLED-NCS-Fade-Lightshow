@@ -91,9 +91,12 @@ void loop() {
   } else if (curTime < 64.1 * 1000) {
     stage3Animation(stage3Colour1, stage3Colour2, false);
     stage3AnimationP2(stage3Colour1, stage3Colour2);
-  } else if (curTime < 74.75 * 1000) {
+  } else if (curTime < 74.8 * 1000) {
     stage3AnimationP3(curTime, CRGB::Magenta, CRGB::LightSeaGreen);
-    // ends either 74.8 or .75
+  } else if (curTime < 76.1 * 1000) {
+    fill_solid(leds, NUM_LEDS, CRGB::Black);
+  } else if (curTime < 100 * 1000) {
+    fill_solid(leds, NUM_LEDS, CRGB::Red);
   }
   
   // 58.7/8 first beat, 60.1 second, 61.4 third (very accurate last 2), 62.8 (though .7 may be ok as well)
@@ -186,20 +189,31 @@ void stage3AnimationP2(CRGB &colour1, CRGB &colour2) {
 }
 
 void stage3AnimationP3(unsigned long &curTime, CRGB colour1, CRGB colour2) {
-  // scaling is one thing and we can do it with the time remaining
-  // The other factor is using the ease function to calculate position using current progress (0-255) and then scaling that to a position in NUM_LEDS
-  // When progress is done we need to start going negative progress down back to 0
-  static uint8_t counter = 0;
-  EVERY_N_MILLISECONDS(15) {
-    counter++;
-    // This reveals the issue, since our function is scaling down at small values it only
-    // results in small differences, instead we want every 15ms to move mostly but we for some reason
-    // also want the curve effect - the issue is that we resolve the 256 down to 8 but counter only goes up 
-    // at the old slower pace, maybe counter should be adjusted to be proportional to total size somehow
-    uint8_t location = scale8(quadwave8(counter), (NUM_LEDS * STAGE_3_PIXEL_DISTANCE * 0.2));
-    leds[(int)(NUM_LEDS * (1 - STAGE_3_PIXEL_DISTANCE)) + location] = colour1;
-    leds[(int)(NUM_LEDS * STAGE_3_PIXEL_DISTANCE) - location] = colour2;
-    fadeToBlackBy(leds, NUM_LEDS, 50);
+  // Tried to use a curve here for a better effect but failed due to needing to also have 
+  // dynamic jumps in how much the counter value increased by as well as the end value of 
+  // the curve which I had computed using a scale function
+  static uint8_t counter = 1;
+  static uint8_t counterChange = 1;
+  static uint8_t limit = NUM_LEDS * 0.6;
+  static uint8_t fadeLevel = 90;
+  EVERY_N_MILLISECONDS_I(climaxTimer, 30) {
+    counter+=counterChange;
+    if (counter == limit) {
+      counterChange = -1;
+    } else if (counter == 0) {
+      counterChange = 1;
+      limit = limit/1.5;
+      if (limit < 0.17 * NUM_LEDS) {
+        limit = 0.17 * NUM_LEDS;
+        // climaxTimer.setPeriod(40);
+        // fadeLevel = 200;
+        fadeLevel = 240;
+      }
+    }
+
+    leds[(int)(NUM_LEDS * (1 - STAGE_3_PIXEL_DISTANCE)) + counter] = colour1;
+    leds[(int)(NUM_LEDS * STAGE_3_PIXEL_DISTANCE) - counter] = colour2;
+    fadeToBlackBy(leds, NUM_LEDS, fadeLevel);
   }
 }
 
