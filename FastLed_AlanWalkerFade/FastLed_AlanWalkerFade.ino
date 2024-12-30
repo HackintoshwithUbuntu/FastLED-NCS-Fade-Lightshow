@@ -91,8 +91,8 @@ void loop() {
   } else if (curTime < 64.1 * 1000) {
     stage3Animation(stage3Colour1, stage3Colour2, false);
     stage3AnimationP2(stage3Colour1, stage3Colour2);
-  } else if (curTime < 110 * 1000) {
-    stage3AnimationP3(CRGB::Magenta, CRGB::LightSeaGreen);
+  } else if (curTime < 74.75 * 1000) {
+    stage3AnimationP3(curTime, CRGB::Magenta, CRGB::LightSeaGreen);
     // ends either 74.8 or .75
   }
   
@@ -185,6 +185,25 @@ void stage3AnimationP2(CRGB &colour1, CRGB &colour2) {
   }
 }
 
+void stage3AnimationP3(unsigned long &curTime, CRGB colour1, CRGB colour2) {
+  // scaling is one thing and we can do it with the time remaining
+  // The other factor is using the ease function to calculate position using current progress (0-255) and then scaling that to a position in NUM_LEDS
+  // When progress is done we need to start going negative progress down back to 0
+  static uint8_t counter = 0;
+  EVERY_N_MILLISECONDS(15) {
+    counter++;
+    float ratio =  1 - ((curTime - (64.1 * 1000)) / ((74.75 - 64.1) * 1000)) + 0.15;
+    Serial.println(((curTime - (64.1 * 1000)) / ((74.75 - 64.1) * 1000)));
+    Serial.println(ratio);
+    uint8_t location = scale8(quadwave8(counter), (NUM_LEDS * STAGE_3_PIXEL_DISTANCE * ratio));
+    leds[(int)(NUM_LEDS * (1 - STAGE_3_PIXEL_DISTANCE)) + location] = colour1;
+    leds[(int)(NUM_LEDS * STAGE_3_PIXEL_DISTANCE) - location] = colour2;
+    fadeToBlackBy(leds, NUM_LEDS, 50);
+  }
+}
+
+/*
+// Keeping this because I liked the look of the animation but it didn't work with the music
 void stage3AnimationP3(CRGB colour1, CRGB colour2) {
   // scaling is one thing and we can do it with the time remaining
   // The other factor is using the ease function to calculate position using current progress (0-255) and then scaling that to a position in NUM_LEDS
@@ -198,3 +217,4 @@ void stage3AnimationP3(CRGB colour1, CRGB colour2) {
     fadeToBlackBy(leds, NUM_LEDS, 10);
   }
 }
+*/
