@@ -192,15 +192,11 @@ void stage3AnimationP3(unsigned long &curTime, CRGB colour1, CRGB colour2) {
   static uint8_t counter = 0;
   EVERY_N_MILLISECONDS(15) {
     counter++;
-    float ratio =  1 - ((curTime - (64.1 * 1000)) / ((74.75 - 64.1) * 1000)) + 0.15;
-    Serial.print(((curTime - (64.1 * 1000)) / ((74.75 - 64.1) * 1000)));
-    Serial.print(',');
-    Serial.print(ratio);
-    Serial.print(',');
-    uint8_t location = scale8(quadwave8(counter), (NUM_LEDS * STAGE_3_PIXEL_DISTANCE * ratio));
-    Serial.print((NUM_LEDS * STAGE_3_PIXEL_DISTANCE * ratio));
-    Serial.print(',');
-    Serial.println(location);
+    // This reveals the issue, since our function is scaling down at small values it only
+    // results in small differences, instead we want every 15ms to move mostly but we for some reason
+    // also want the curve effect - the issue is that we resolve the 256 down to 8 but counter only goes up 
+    // at the old slower pace, maybe counter should be adjusted to be proportional to total size somehow
+    uint8_t location = scale8(quadwave8(counter), (NUM_LEDS * STAGE_3_PIXEL_DISTANCE * 0.2));
     leds[(int)(NUM_LEDS * (1 - STAGE_3_PIXEL_DISTANCE)) + location] = colour1;
     leds[(int)(NUM_LEDS * STAGE_3_PIXEL_DISTANCE) - location] = colour2;
     fadeToBlackBy(leds, NUM_LEDS, 50);
