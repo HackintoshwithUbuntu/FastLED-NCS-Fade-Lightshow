@@ -1,6 +1,6 @@
 // FastLED definitions
-// #define FASTLED_INTERNAL     // remove annoying pragma messages
-#define FASTLED_RMT5_RECYCLE 1  // https://github.com/FastLED/FastLED/issues/1768
+// #define FASTLED_INTERNAL     // Remove annoying pragma messages
+#define FASTLED_RMT5_RECYCLE 1  // https://github.com/FastLED/FastLED/issues/1768 Commenting this line should improve perfromance but makes Serial unusable
 // Includes
 #include <cmath> 
 #include <Arduino.h>
@@ -27,10 +27,7 @@ CRGB leds[NUM_LEDS];
 uint8_t curStage = 0;
 uint8_t curSubStage = 0;
 
-// TODO just change this to a float divide and ceil
-const uint8_t stage0Size = (NUM_LEDS < 32) ? 1 : ceil((float)NUM_LEDS / 32);
-uint8_t stage0CurrentLed = 0;
-uint8_t stage1Offset = 0;
+const uint8_t stage0Size = ceil((float)NUM_LEDS / 32);
 
 CRGB stage3Colour1 = CRGB::Yellow;
 CRGB stage3Colour2 = 0xc20000;  // Dark Red
@@ -40,41 +37,29 @@ uint16_t nextFlash = 0;
 
 unsigned long startTime;
 
-const CRGB stage4Colour = CRGB(255, 84, 84);
-CRGBPalette16 stage0Palette(
-  // Stage 0 and 1 Colours
+const CRGB stage01Palette[5] = {
   0xecbfff,   // Very Light Purple
   CRGB::Red,
   CRGB::DarkGreen,
   CRGB(26, 171, 176),    // Light Blue
   CRGB::Blue,
-  stage4Colour,
-  CRGB(166, 10, 44),     // Dark Red 
-  stage4Colour,
-  CRGB(250, 177, 193),   // Very Light Red
-  stage4Colour,
-  CRGB(59, 0, 13),       // Brown
-  stage4Colour,
-  0x100000,
-  0x100000,
-  0x100000,
-  0x100000
-);
+};
 
+const CRGB stage4BgColour = CRGB(255, 84, 84);
 CRGBPalette16 stage4Palette(
-  stage4Colour,
+  stage4BgColour,
   CRGB(166, 10, 44),     // Dark Red 
-  stage4Colour,
+  stage4BgColour,
   CRGB(250, 177, 193),   // Very Light Red
-  stage4Colour,
+  stage4BgColour,
   CRGB(59, 0, 13),       // Brown
-  stage4Colour,
+  stage4BgColour,
   CRGB(227, 61, 169),     // Pinkish Red 
-  stage4Colour,
+  stage4BgColour,
   CRGB(250, 177, 193),   // Very Light Red
-  stage4Colour,
+  stage4BgColour,
   CRGB(59, 0, 13),       // Brown
-  stage4Colour,
+  stage4BgColour,
   0x100000,
   0x100000,
   0x100000
@@ -88,10 +73,7 @@ void setup() {
 }
 
 void loop() {
-  //leds[0] = 0xecbfff;
-
-  // TODO probablly change this to case switch for future use
-  unsigned long curTime = millis() - startTime + 60*1000;
+  unsigned long curTime = millis() - startTime; // Add n * 1000 here to start animation at a different point
 
   if (curTime < 21.3 * 1000) {
     stage0Animation();
@@ -113,7 +95,6 @@ void loop() {
   } else if (curTime < 53.8 * 1000) {
     stage3Animation(0x00ff4c, 0x00ff4c, true); // Bright green
   } else if (curTime < 58.7 * 1000) {
-    // TODO could set variable inital value to these and then use same code line with larger first interval in part 2
     stage3Animation(CRGB::Yellow, 0xc20000, false); // and Dark red
   } else if (curTime < 64.1 * 1000) {
     stage3Animation(stage3Colour1, stage3Colour2, false);
@@ -131,19 +112,16 @@ void loop() {
   } else {
     stage4Rainbow();
   }
-  
-  // would want to send second shockwave at 78.75, 81.75(actually 81.4), maybe 24.4
 
   FastLED.show();
 }
 
 void stage0Animation() {
+  static uint8_t stage0CurrentLed = 0;
   EVERY_N_MILLISECONDS(700) {
     for (int i = stage0CurrentLed; i < stage0CurrentLed + stage0Size; i++) {
-      leds[i] = ColorFromPalette(stage0Palette, curSubStage * 16, NOBLEND); // use multiply 16 with only stage 1 colours for nice gradients
+      leds[i] = stage01Palette[curSubStage];
     }
-
-    //leds[stage0CurrentLed] = ColorFromPalette(stage0Palette, curSubStage * 16);
     stage0CurrentLed += 4 * stage0Size;
 
     if (stage0CurrentLed >= NUM_LEDS) {
@@ -158,14 +136,14 @@ void stage0Animation() {
 }
 
 void stage1Animation(int8_t movement) {
+  static uint8_t stage1Offset = 0;
   if (isFlashing) return;
 
   EVERY_N_MILLISECONDS(100) {
     // I tried to be more efficient but failed due to the multiple possible configs
     // in theory you can just update the first led in each colour splash
     for (int i = 0; i < NUM_LEDS; i++) {
-      // TODO possibly use a scale fast math function here and elsewhere
-      leds[i] = ColorFromPalette(stage0Palette, (((NUM_LEDS + stage1Offset + i) % NUM_LEDS) / stage0Size) % 4 * 16);
+      leds[i] = stage01Palette[(((NUM_LEDS + stage1Offset + i) % NUM_LEDS) / stage0Size) % 4];
     }
     stage1Offset+=movement;
   }
@@ -189,6 +167,7 @@ void flashAnimation(unsigned long &curTime, uint8_t ratio) {
       }
     }
 }
+
 
 // Adapted from https://github.com/s-marley/FastLED-basics/blob/main/5.%20Multiple%20patterns/functionsTimer/functionsTimer.ino
 const uint16_t sinMiddle1 = (NUM_LEDS) * STAGE_3_PIXEL_DISTANCE - 1;
@@ -247,6 +226,7 @@ void stage3AnimationP3(unsigned long &curTime, CRGB colour1, CRGB colour2) {
   }
 }
 
+
 const uint16_t midpoint = NUM_LEDS / 2;
 const float STAGE_4_SLOW_SPEED = (1 - (0.8 * (float)STAGE_4_FAST_SPEED)) / 0.2;
 // I tried to get some kind of cubic function working for this but didn't give the result I wanted
@@ -262,8 +242,8 @@ void stage4Animation() {
       stage4Timer.setPeriod((float)STAGE_4_ANIMATION_TIME / (NUM_LEDS / 2) * STAGE_4_FAST_SPEED * 1000);
     }
 
-    leds[midpoint + counter] = stage4Colour;
-    leds[midpoint - counter] = stage4Colour;
+    leds[midpoint + counter] = stage4BgColour;
+    leds[midpoint - counter] = stage4BgColour;
   }
 }
 
@@ -274,8 +254,8 @@ void stage4Waves() {
     // Clear old wave
     for (int16_t i = curLocation - 1; i < min(NUM_LEDS/2, curLocation + 5); i++) {
       if (i < 0) continue;
-      leds[midpoint + i] = stage4Colour;
-      leds[midpoint - i] = stage4Colour;
+      leds[midpoint + i] = stage4BgColour;
+      leds[midpoint - i] = stage4BgColour;
     }
 
     // Add new wave
@@ -301,6 +281,7 @@ void stage4Rainbow() {
     offset++;
   }
 }
+
 // Other Stage 4 animation attempts using curves instead which would have been nicer
 // uint16_t cubic_entry(unsigned long &curTime) {
 //   const long elapsedTime = curTime - 76.1 * 1000;
