@@ -2,6 +2,7 @@
 // #define FASTLED_INTERNAL     // remove annoying pragma messages
 #define FASTLED_RMT5_RECYCLE 1  // https://github.com/FastLED/FastLED/issues/1768
 // Includes
+#include <cmath> 
 #include <Arduino.h>
 #include <FastLED.h>
 
@@ -14,6 +15,13 @@
 // Some animation control parameters
 #define STAGE_3_SPLASHSIZE     5    // Size of "splash" when changing colours on first beat drop
 #define STAGE_3_PIXEL_DISTANCE 0.6  // Fraction of the LED strip that the flying pixel covers
+#define STAGE_4_ANIMATION_TIME 2.65 // How long the spread from centre animation takes in seconds
+#define STAGE_4_FAST_SPEED     0.55 // How fast the faster part of the animation will run with respect to its time taken if all parts were equal
+#define STAGE_4_COLOR_BLEND    3    // How much to blend "wave" colour with background, between 0 (no blend) and 4 (max blend)
+#define STAGE_4_FADE_SPEED     5    // Speed at which background fades, between 0 and 255
+
+// Parameters you shoudn't need to touch
+#define SQRT_3 1.4422495
 CRGB leds[NUM_LEDS];
 
 uint8_t curStage = 0;
@@ -25,14 +33,14 @@ uint8_t stage0CurrentLed = 0;
 uint8_t stage1Offset = 0;
 
 CRGB stage3Colour1 = CRGB::Yellow;
-CRGB stage3Colour2 = 0xc20000;
+CRGB stage3Colour2 = 0xc20000;  // Dark Red
 
 bool isFlashing = false;
 uint16_t nextFlash = 0;
 
 unsigned long startTime;
 
-// TODO probably just make this into an array
+const CRGB stage4Colour = CRGB(255, 84, 84);
 CRGBPalette16 stage0Palette(
   // Stage 0 and 1 Colours
   0xecbfff,   // Very Light Purple
@@ -40,14 +48,33 @@ CRGBPalette16 stage0Palette(
   CRGB::DarkGreen,
   CRGB(26, 171, 176),    // Light Blue
   CRGB::Blue,
+  stage4Colour,
+  CRGB(166, 10, 44),     // Dark Red 
+  stage4Colour,
+  CRGB(250, 177, 193),   // Very Light Red
+  stage4Colour,
+  CRGB(59, 0, 13),       // Brown
+  stage4Colour,
   0x100000,
   0x100000,
   0x100000,
-  0x100000,
-  0x100000,
-  0x100000,
-  0x100000,
-  0x100000,
+  0x100000
+);
+
+CRGBPalette16 stage4Palette(
+  stage4Colour,
+  CRGB(166, 10, 44),     // Dark Red 
+  stage4Colour,
+  CRGB(250, 177, 193),   // Very Light Red
+  stage4Colour,
+  CRGB(59, 0, 13),       // Brown
+  stage4Colour,
+  CRGB(227, 61, 169),     // Pinkish Red 
+  stage4Colour,
+  CRGB(250, 177, 193),   // Very Light Red
+  stage4Colour,
+  CRGB(59, 0, 13),       // Brown
+  stage4Colour,
   0x100000,
   0x100000,
   0x100000
@@ -64,7 +91,7 @@ void loop() {
   //leds[0] = 0xecbfff;
 
   // TODO probablly change this to case switch for future use
-  unsigned long curTime = millis() - startTime + 40*1000;
+  unsigned long curTime = millis() - startTime + 60*1000;
 
   if (curTime < 21.3 * 1000) {
     stage0Animation();
@@ -95,13 +122,17 @@ void loop() {
     stage3AnimationP3(curTime, CRGB::Magenta, CRGB::LightSeaGreen);
   } else if (curTime < 76.1 * 1000) {
     fill_solid(leds, NUM_LEDS, CRGB::Black);
-  } else if (curTime < 100 * 1000) {
-    fill_solid(leds, NUM_LEDS, CRGB::Red);
+  } else if (curTime < (76.1 + STAGE_4_ANIMATION_TIME) * 1000) { // 78.75
+    stage4Animation();
+  } else if (curTime < 96 * 1000) {
+    stage4Waves();
+  } else if (curTime < 97.35 * 1000) {
+    fadeToBlackBy(leds, NUM_LEDS, STAGE_4_FADE_SPEED);
+  } else {
+    stage4Rainbow();
   }
   
-  // 58.7/8 first beat, 60.1 second, 61.4 third (very accurate last 2), 62.8 (though .7 may be ok as well)
-  // Other sound at 63.2, 63.75, 64.1
-  // 102.7 first
+  // would want to send second shockwave at 78.75, 81.75(actually 81.4), maybe 24.4
 
   FastLED.show();
 }
@@ -194,7 +225,7 @@ void stage3AnimationP3(unsigned long &curTime, CRGB colour1, CRGB colour2) {
   // the curve which I had computed using a scale function
   static uint8_t counter = 1;
   static uint8_t counterChange = 1;
-  static uint8_t limit = NUM_LEDS * 0.6;
+  static uint8_t limit = NUM_LEDS * STAGE_3_PIXEL_DISTANCE;
   static uint8_t fadeLevel = 90;
   EVERY_N_MILLISECONDS_I(climaxTimer, 30) {
     counter+=counterChange;
@@ -206,8 +237,7 @@ void stage3AnimationP3(unsigned long &curTime, CRGB colour1, CRGB colour2) {
       if (limit < 0.17 * NUM_LEDS) {
         limit = 0.17 * NUM_LEDS;
         // climaxTimer.setPeriod(40);
-        // fadeLevel = 200;
-        fadeLevel = 240;
+        fadeLevel = 170;
       }
     }
 
@@ -216,6 +246,100 @@ void stage3AnimationP3(unsigned long &curTime, CRGB colour1, CRGB colour2) {
     fadeToBlackBy(leds, NUM_LEDS, fadeLevel);
   }
 }
+
+const uint16_t midpoint = NUM_LEDS / 2;
+const float STAGE_4_SLOW_SPEED = (1 - (0.8 * (float)STAGE_4_FAST_SPEED)) / 0.2;
+// I tried to get some kind of cubic function working for this but didn't give the result I wanted
+void stage4Animation() {
+  static uint16_t counter = 0;
+  EVERY_N_MILLISECONDS_I(stage4Timer, ((float)STAGE_4_ANIMATION_TIME / (NUM_LEDS / 2) * STAGE_4_FAST_SPEED) * 1000) {
+    counter++;
+    if (counter == NUM_LEDS / 2) {
+      stage4Timer.setPeriod(99 * 1000);
+    } else if (counter == uint16_t(NUM_LEDS/2 * 0.4)) {
+      stage4Timer.setPeriod((float)STAGE_4_ANIMATION_TIME / (NUM_LEDS / 2) * STAGE_4_SLOW_SPEED * 1000);
+    } else if (counter == uint16_t(NUM_LEDS/2 * STAGE_4_FAST_SPEED)) {
+      stage4Timer.setPeriod((float)STAGE_4_ANIMATION_TIME / (NUM_LEDS / 2) * STAGE_4_FAST_SPEED * 1000);
+    }
+
+    leds[midpoint + counter] = stage4Colour;
+    leds[midpoint - counter] = stage4Colour;
+  }
+}
+
+void stage4Waves() {
+  static int16_t curLocation = -5;
+  static uint8_t waveNumber = 0;
+  EVERY_N_MILLISECONDS((2.7 * 1000) / (NUM_LEDS / 2 + 5)) {
+    // Clear old wave
+    for (int16_t i = curLocation - 1; i < min(NUM_LEDS/2, curLocation + 5); i++) {
+      if (i < 0) continue;
+      leds[midpoint + i] = stage4Colour;
+      leds[midpoint - i] = stage4Colour;
+    }
+
+    // Add new wave
+    for (int16_t i = curLocation; i < min(NUM_LEDS/2, curLocation + 5); i++) {
+      if (i < 0) continue;
+      Serial.println(((waveNumber * 2 + 6) * 16) + (i - curLocation - 3) * STAGE_4_COLOR_BLEND);
+      leds[midpoint + i] = ColorFromPalette(stage4Palette, ((waveNumber * 2 + 1) * 16) + (i - curLocation - 3) * STAGE_4_COLOR_BLEND);
+      leds[midpoint - i] = ColorFromPalette(stage4Palette, ((waveNumber * 2 + 1) * 16) + (i - curLocation - 3) * STAGE_4_COLOR_BLEND);
+    }
+
+    curLocation++;
+    if (curLocation == NUM_LEDS/2) {
+      waveNumber++;
+      curLocation = -5;
+    }
+  }
+}
+
+void stage4Rainbow() {
+  static uint8_t offset = 0;
+  EVERY_N_MILLISECONDS(10) {
+    fill_rainbow(leds, NUM_LEDS, offset, 8);
+    offset++;
+  }
+}
+// Other Stage 4 animation attempts using curves instead which would have been nicer
+// uint16_t cubic_entry(unsigned long &curTime) {
+//   const long elapsedTime = curTime - 76.1 * 1000;
+//   return static_cast<uint16_t>(NUM_LEDS/(2*3))*(pow(((3/(STAGE_4_ANIMATION_TIME * 1000)) * elapsedTime - SQRT_3), 3) + 3);
+// }
+// void stage4Animation (unsigned long &curTime) {
+//   const uint16_t offset = cubic_entry(curTime);
+//   Serial.println(offset);
+//   leds[midpoint + offset] = CRGB::Red;
+//   leds[midpoint - offset] = CRGB::Red;
+// }
+
+// void stage4Animation() {
+//   // We want a quarter of the wave to complete in the given time, we want a 
+//   uint16_t progress = 0; 
+//   beatsin16(15/STAGE_4_ANIMATION_TIME, 0, midpoint, 0, 0) - midpoint/2;
+//   Serial.println(sinBeat);
+//   leds[midpoint + sinBeat] = CRGB::Red;
+//   leds[midpoint - sinBeat] = CRGB::Red;
+// }
+// void stage4Animation () {
+//   static uint8_t progress = 0;
+//   EVERY_N_MILLISECONDS(STAGE_4_ANIMATION_TIME / NUM_LEDS * 1000) {
+//     progress++;
+//     leds[midpoint + scale16by8(ease8InOutCubic(progress), NUM_LEDS)/2] = CRGB::Red; // For performance consider ease8InOutApprox() and ease8InOutQuad()
+//     leds[midpoint - scale16by8(ease8InOutCubic(progress), NUM_LEDS)/2] = CRGB::Red;
+//   }
+// }
+// void stage4Animation() {
+//   static uint8_t progress = 0;
+//   EVERY_N_MILLISECONDS(STAGE_4_ANIMATION_TIME / NUM_LEDS * 1000) {
+//     progress++;
+//     uint8_t transformedValue = ease8InOutCubic(progress);
+//     Serial.println(transformedValue);
+//     uint16_t scaledValue = scale16by8(transformedValue, NUM_LEDS) / 2;
+//     leds[midpoint + scaledValue] = CRGB::Red;
+//     leds[midpoint - scaledValue] = CRGB::Red;
+//   }
+// }
 
 /*
 // Keeping this because I liked the look of the animation but it didn't work with the music
