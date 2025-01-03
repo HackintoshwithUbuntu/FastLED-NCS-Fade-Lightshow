@@ -7,10 +7,10 @@
 #include <FastLED.h>
 
 // Parameters you will likely need to adjust to run the animation
-#define NUM_LEDS            96      // Works best if this number is divisible by 32
+#define NUM_LEDS            96      // Works best if this number is divisible by 32, though other numbers work fine
 #define LED_PIN             2       // Set this to the pin the data wire for leds is connected to
 #define DEFAULT_BRIGHTNESS  50      // 50 is a good balance between brightness and power usage, set between 0 (no brightness) and 100 (max brightness)
-#define LED_TYPE            WS2812B // Set this to the type of FastLED supported strip you are using
+#define LED_TYPE            WS2812B // Set this to the type of FastLED supported strip you are using, see https://github.com/FastLED/FastLED/wiki/Overview
 
 // Some animation control parameters
 #define STAGE_3_SPLASHSIZE     5    // Size of "splash" when changing colours on first beat drop
@@ -117,7 +117,7 @@ void loop() {
 }
 
 void stage0Animation() {
-  static uint8_t stage0CurrentLed = 0;
+  static uint16_t stage0CurrentLed = 0;
   EVERY_N_MILLISECONDS(700) {
     for (int i = stage0CurrentLed; i < stage0CurrentLed + stage0Size; i++) {
       leds[i] = stage01Palette[curSubStage];
@@ -136,7 +136,7 @@ void stage0Animation() {
 }
 
 void stage1Animation(int8_t movement) {
-  static uint8_t stage1Offset = 0;
+  static uint16_t stage1Offset = 0;
   if (isFlashing) return;
 
   EVERY_N_MILLISECONDS(100) {
@@ -202,9 +202,9 @@ void stage3AnimationP3(unsigned long &curTime, CRGB colour1, CRGB colour2) {
   // Tried to use a curve here for a better effect but failed due to needing to also have 
   // dynamic jumps in how much the counter value increased by as well as the end value of 
   // the curve which I had computed using a scale function
-  static uint8_t counter = 1;
-  static uint8_t counterChange = 1;
-  static uint8_t limit = NUM_LEDS * STAGE_3_PIXEL_DISTANCE;
+  static uint16_t counter = 1;
+  static uint16_t counterChange = 1;
+  static uint16_t limit = NUM_LEDS * STAGE_3_PIXEL_DISTANCE;
   static uint8_t fadeLevel = 90;
   EVERY_N_MILLISECONDS_I(climaxTimer, 30) {
     counter+=counterChange;
