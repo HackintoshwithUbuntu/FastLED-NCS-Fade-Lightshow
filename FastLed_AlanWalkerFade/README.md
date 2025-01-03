@@ -1,5 +1,5 @@
 # FastLed Lightshow for NCS Alan Walker Fade
-A (mostly) efficient rendition of a light show that compliments the first 2 minutes of music from the NCS version of the Alan Walker Fade soundtrack (the one you here in every second Youtube compilation).
+A (mostly) efficient rendition of a light show that compliments the first 2 minutes of music from the NCS version of the Alan Walker Fade soundtrack (the one you here in every second YouTube compilation).
 
 ## See it in action
 TODO add images / videos here
@@ -26,7 +26,7 @@ I used an Esp32-C3 Supermini board for this project. To supply power while debug
 
 (TODO Insert picture)
 
-For 96 LEDs I found the max power consumption to be around 0.45 Amps at 5 volts with my WS2812B ECO leds strips. Your mileage may vary but note that often real world power consumption is much lower than the maximum figures quoted online. 
+For 96 LEDs I found the max power consumption to be around 0.45 Amps at 5 volts with my WS2812B ECO leds strips. Your mileage may vary but note that real world power consumption is often much lower than the maximum figures quoted online. 
 Ensure your power supply is capable of powering whatever load you give it. I found [QuinLED's guide](https://quinled.info/2020/03/12/digital-led-power-usage/) a good place to start for real world power consumption figures.
 
 (TODO picture of power consumption)
@@ -40,10 +40,10 @@ For powering more LEDs (and at greater brightness levels), I used an old 5V 3A U
 Most of my work consisted of two things. Using this [online editor](https://audiomass.co/) to help visualise waveforms to find patterns to optimise timings and identify beat changes. The second part was just trial and error. 
 
 ## Using more than 256 LEDs
-The code has been designed to work with any number of LEDs. However, I don't have the hardware to test with more than 256 LEDs. There may be some minor adjustments to the code required (such as changing a `uint8_t` to `uint16_t`) for it to run perfectly with that many LEDs (though this is not for certain).
+The code has been designed to work with any number of LEDs. However, I don't have the hardware to test with more than 256 LEDs. There may be some minor adjustments to the code required (such as changing a `uint8_t` to `uint16_t`) for it to run perfectly with that many LEDs (though it's possible no changes are required).
 
 ## Other notes
-There are some #defines at the top of the code that you may want to adjust. They were required to reduce some FastLED verbose output on my ESP32-C3 Supermini.
+There are some other #defines at the top of the code that you may want to adjust. The two lines at the top were required to reduce some FastLED verbose output on my ESP32-C3 Supermini. 
 
 If you are interested in making edits or debugging part of the animation. One way to make your life easier is to edit the following line to add some amount of time to skip to a certain point in the animation eg. add `+ 60 * 1000` to start from the 60 second mark. Some animation that rely on time elapased since the stage started won't work perfectly like this and you will need to instead forward to just before that start of that "stage".
 ```cpp
@@ -53,9 +53,3 @@ unsigned long curTime = millis() - startTime; // Add n * 1000 here to start anim
 There are 2 other folders in this repo besides the main show and track, they were some examples I used to start experimenting with my ESP32 and to ensure everything was working. They are not required to run the show but have been kept in case you want to conduct some tests, especially for the infamous [C3 Supermini Wifi bug](https://roryhay.es/blog/esp32-c3-super-mini-flaw).
 
 I have tried to keep the code mostly performant. Though some places were just too hard and took too much time and could use improvements (eg. when the colours are spinning near the start, you could just edit the last/first pixel in each colour "splash" though with the number of different sizing combinations possible I found it too difficult and modern microcontrollers are easily able to cope with the load of the current implementation).
-
-#### todos for readme
-* pics and explanation of my setup (power supply, esp32 etc)
-* pic of power consumption
-* how I did timings using audiomass and other how I did it
-* debugging by adding an increment to current time
