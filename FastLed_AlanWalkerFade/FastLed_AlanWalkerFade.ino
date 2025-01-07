@@ -6,13 +6,17 @@
 #include <Arduino.h>
 #include <FastLED.h>
 
+//////////////////////////////////////////////////////////////////
 // Parameters you will likely need to adjust to run the animation
-#define NUM_LEDS            96      // Works best if this number is divisible by 32, though other numbers work fine
+//////////////////////////////////////////////////////////////////
+#define NUM_LEDS            32      // Works best if this number is divisible by 32, though other numbers work fine
 #define LED_PIN             2       // Set this to the pin the data wire for leds is connected to
 #define DEFAULT_BRIGHTNESS  50      // 50 is a good balance between brightness and power usage, set between 0 (no brightness) and 100 (max brightness)
 #define LED_TYPE            WS2812B // Set this to the type of FastLED supported strip you are using, see https://github.com/FastLED/FastLED/wiki/Overview
 
+/////////////////////////////////////
 // Some animation control parameters
+/////////////////////////////////////
 #define STAGE_3_SPLASHSIZE     5    // Size of "splash" when changing colours on first beat drop
 #define STAGE_3_PIXEL_DISTANCE 0.6  // Fraction of the LED strip that the flying pixel covers
 #define STAGE_4_ANIMATION_TIME 2.65 // How long the spread from centre animation takes in seconds
@@ -20,30 +24,17 @@
 #define STAGE_4_COLOR_BLEND    3    // How much to blend "wave" colour with background, between 0 (no blend) and 4 (max blend)
 #define STAGE_4_FADE_SPEED     5    // Speed at which background fades, between 0 and 255
 
-// Parameters you shoudn't need to touch
-#define SQRT_3 1.4422495
-CRGB leds[NUM_LEDS];
-
-uint8_t curStage = 0;
-uint8_t curSubStage = 0;
-
-const uint8_t stage0Size = ceil((float)NUM_LEDS / 32);
-
-CRGB stage3Colour1 = CRGB::Yellow;
-CRGB stage3Colour2 = 0xc20000;  // Dark Red
-
-bool isFlashing = false;
-uint16_t nextFlash = 0;
-
-unsigned long startTime;
-
+// These are the colours used in the initial "splashes"
 const CRGB stage01Palette[5] = {
-  0xecbfff,   // Very Light Purple
+  0xecbfff,              // Very Light Purple
   CRGB::Red,
   CRGB::DarkGreen,
   CRGB(26, 171, 176),    // Light Blue
   CRGB::Blue,
 };
+
+CRGB stage3Colour1 = CRGB::Yellow;
+CRGB stage3Colour2 = 0xc20000;  // Dark Red
 
 const CRGB stage4BgColour = CRGB(255, 84, 84);
 CRGBPalette16 stage4Palette(
@@ -64,6 +55,26 @@ CRGBPalette16 stage4Palette(
   0x100000,
   0x100000
 );
+
+/////////////////////////////////////////
+// Parameters you shoudn't need to touch
+/////////////////////////////////////////
+#define SQRT_3 1.4422495
+CRGB leds[NUM_LEDS];
+
+uint8_t curStage = 0;
+uint8_t curSubStage = 0;
+
+const uint8_t stage0Size = ceil((float)NUM_LEDS / 32);
+
+bool isFlashing = false;
+uint16_t nextFlash = 0;
+
+unsigned long startTime;
+
+//////////////////
+// Animation Code
+//////////////////
 
 void setup() {
   FastLED.addLeds<LED_TYPE, LED_PIN, GRB>(leds, NUM_LEDS);
