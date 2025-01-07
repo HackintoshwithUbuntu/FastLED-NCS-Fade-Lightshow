@@ -1,8 +1,11 @@
 # FastLed Lightshow for NCS Alan Walker Fade
-A (mostly) efficient rendition of a light show that compliments the first 2 minutes of music from the NCS version of the Alan Walker Fade soundtrack (the one you here in every second YouTube compilation). Adapts to different lengths and runs in a straight line for those that don't want to cut up their LED strips.
+A (mostly) efficient rendition of a light show that compliments the first 2 minutes of music from the NCS version of the Alan Walker Fade soundtrack (the one you hear in every second YouTube compilation). Adapts to different lengths and runs in a straight line for those that don't want to cut up their LED strips.
 
 ## See it in action
-TODO Add gifs
+<div style="display: flex; justify-content: center; gap: 10px;">
+  <img src="https://github.com/user-attachments/assets/114df542-3cbe-4e74-afff-0d182eae9b6f" alt="first" style="width: 200px; height: auto;">
+  <img src="https://github.com/user-attachments/assets/a8d87073-578f-41e1-9a63-4e6cd605ec9c" alt="second" style="width: 200px; height: auto;">
+</div>
 
 See the full show on a straight WS2812B Eco LED strip [here](https://youtu.be/it40aN8oCxQ)
 
