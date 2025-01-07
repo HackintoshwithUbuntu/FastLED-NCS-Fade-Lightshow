@@ -31,17 +31,11 @@ The code is based on the Arduino framework using the FastLED library. It can pro
 ### Hardware setup and power consumption
 I used an Esp32-C3 Supermini board for this project. To supply power while debugging I just used my computer's USB port and only applied the animation to between 32 and 96 LEDs. 
 
-(TODO Insert picture)
-
 For 96 LEDs I found the max power consumption to be around 0.45 Amps at 5 volts with my WS2812B ECO leds strips. Your mileage may vary but note that real world power consumption is often much lower than the maximum figures quoted online. 
 Ensure your power supply is capable of powering whatever load you give it. I found [QuinLED's guide](https://quinled.info/2020/03/12/digital-led-power-usage/) a good place to start for real world power consumption figures.
 
-(TODO picture of power consumption)
-
 For powering more LEDs (and at greater brightness levels), I used an old 5V 3A USB-C power supply by Labists that came with my Raspberry Pi but was later replaced by the official power supply since it seemed not to handle the load of my SSD well and caused random shutdowns
 (after replacing the power supply and fixing [SSD enclosure UASP issues,](https://forums.raspberrypi.com/viewtopic.php?t=245931&start=225) the shutdowns have since want away).
-
-(TODO picture of power supply)
 
 ## How I did it
 Most of my work consisted of two things. Using this [online editor](https://audiomass.co/) to help visualise waveforms to find patterns to optimise timings and identify beat changes. The second part was just trial and error. 
