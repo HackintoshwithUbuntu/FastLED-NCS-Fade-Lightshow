@@ -1,8 +1,12 @@
 # FastLed Lightshow for NCS Alan Walker Fade
-A (mostly) efficient rendition of a light show that compliments the first 2 minutes of music from the NCS version of the Alan Walker Fade soundtrack (the one you here in every second YouTube compilation).
+A (mostly) efficient rendition of a light show that compliments the first 2 minutes of music from the NCS version of the Alan Walker Fade soundtrack (the one you here in every second YouTube compilation). Adapts to different lengths and runs in a straight line for those that don't want to cut up their LED strips.
 
 ## See it in action
-TODO add images / videos here
+TODO Add gifs
+
+See the full show on a straight WS2812B Eco LED strip [here](https://youtu.be/it40aN8oCxQ)
+
+See the full show on a curled strip [here](https://youtu.be/it40aN8oCxQ)
 
 ## Running the show
 The code is based on the Arduino framework using the FastLED library. It can probably be easily ported to PlatformIO, the following instructions are relevant to those using either the Arduino IDE or CLI.
