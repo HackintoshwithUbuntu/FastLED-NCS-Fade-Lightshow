@@ -9,7 +9,7 @@ A (mostly) efficient rendition of a light show that compliments the first 2 minu
 
 See the full show on a straight WS2812B Eco LED strip [here](https://youtu.be/it40aN8oCxQ)
 
-See the full show on a curled strip [here](https://youtu.be/it40aN8oCxQ)
+See the full show on a curled strip [here](https://youtu.be/tGx2DvXdLu0)
 
 ## Running the show
 The code is based on the Arduino framework using the FastLED library. It can probably be easily ported to PlatformIO, the following instructions are relevant to those using either the Arduino IDE or CLI.
